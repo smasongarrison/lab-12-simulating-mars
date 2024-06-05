@@ -1,20 +1,168 @@
 Lab 12 - Colonizing Mars
 ================
-Insert your name here
-Insert date here
+Eric Stone
+6.4.24
 
 ### Load packages and data
 
 ``` r
-library(tidyverse) 
-library(tidymodels)
+if (!require("ggplot2")) install.packages("ggplot2")
+library(ggplot2)
+if (!require("MASS")) install.packages("MASS")
+library(MASS)
+if (!require("tidyverse")) install.packages("tidyverse")
+library(tidyverse)
 ```
 
-### Exercise 1
+I’m not certain why we’re doing it this way, rather than just loading
+the packages. Let’s discuss this when we meet.
 
-Remove this text, and add your answer for Exercise 1 here. Add code
-chunks as needed. Don’t forget to label your code chunk. Do not use
-spaces in code chunk labels.
+### Exercise 1.1
+
+> 1.Create a dataframe to store your colonists’ attributes. I’ve already
+> gotten you started, but you’ll need to add their ages.
+
+``` r
+set.seed(123)
+```
+
+``` r
+df_colonists <- data.frame(id = 1:100, age = rnorm(100, mean = 30, sd = 5))
+```
+
+> Now, let’s visualize the age distribution of our colonists using a
+> histogram. This will help us understand the diversity within our
+> potential Mars colony.
+
+``` r
+ggplot(data = df_colonists, mapping = aes(x = age)) +
+  geom_histogram() +
+  labs(title = "Distribution of Colonist Ages")
+```
+
+![](lab-12_files/figure-gfm/creating-histogram-1.png)<!-- -->
+
+Most of the ages are between 20 and 40, as would be expected by the mean
+and sd’s, but there are some over 40 and under 20.
+
+### Exercise 1.2
+
+> Consider the histograms of the age distribution that we’ve generated
+> (as well as two more I added). What do you notice about the age
+> distribution of our colonists? How does the seed affect the spread of
+> the distribution?
+
+I think the idea here is to see how the shape looks with different
+seeds. So I redid this, with different seeds.
+
+``` r
+set.seed(100)
+df_colonists_seed100 <- data.frame(id = 1:100, age = rnorm(100, mean = 30, sd = 5))
+ggplot(data = df_colonists, mapping = aes(x = age)) +
+  geom_histogram() +
+  labs(title = "Distribution of Colonist Ages, Seed 100")
+```
+
+![](lab-12_files/figure-gfm/create-data-frame-100-1.png)<!-- -->
+
+``` r
+set.seed(1000)
+df_colonists_seed1000 <- data.frame(id = 1:100, age = rnorm(100, mean = 30, sd = 5))
+ggplot(data = df_colonists, mapping = aes(x = age)) +
+  geom_histogram() +
+  labs(title = "Distribution of Colonist Ages, Seed 1000")
+```
+
+![](lab-12_files/figure-gfm/create-data-frame-1000-1.png)<!-- -->
+
+The distributions are slightly different, as would be expected.
+
+Note in what you (Mason) showed, they were on the same graph. I’m not
+seeing how you did that. That would be a good thing to discuss too.
+
+> What roles would these colonists have? Let’s decide….. We need
+> engineers, scientists, and medics in equal numbers. We’ll create a
+> variable, role, with three categories: engineer, scientist, and medic.
+> We’ll use the rep() function to simulate this categorical variable.
+> I’ve demonstrated several ways you can use rep() to create the role
+> variable. Try them out.
+
+``` r
+set.seed(1)
+df_colonists_roles <- data.frame(id = 1:100, age = rnorm(100, mean = 30, sd = 5), role1 = rep(c("engineer", "scientist", "medic"), length.out = 100), role2 = rep(c("engineer", "scientist", "medic"), each = 34, length.out = 100), role3 = rep(c("engineer", "scientist", "medic"), times = c(33, 33, 33), length.out = 100), role4 = sample(c("engineer", "scientist", "medic"), replace = TRUE, size = 100, prob = c(1,1,1)) ) 
+df_colonists_roles %>%
+  pivot_longer(cols = starts_with("role"), names_to = "role_type", values_to = "role") %>%
+  count(role_type, role)
+```
+
+    ## # A tibble: 12 × 3
+    ##    role_type role          n
+    ##    <chr>     <chr>     <int>
+    ##  1 role1     engineer     34
+    ##  2 role1     medic        33
+    ##  3 role1     scientist    33
+    ##  4 role2     engineer     34
+    ##  5 role2     medic        32
+    ##  6 role2     scientist    34
+    ##  7 role3     engineer     34
+    ##  8 role3     medic        33
+    ##  9 role3     scientist    33
+    ## 10 role4     engineer     24
+    ## 11 role4     medic        31
+    ## 12 role4     scientist    45
+
+(yes, I got some help from chat for the pivot_longer command, which I
+don’t really understand)
+
+At any rate, here’s what I can surmise:
+
+- Method 1 and Method 3 seem to be the same. (I tried this with multiple
+  seeds, and it always produced the exact same results.) In both cases,
+  ID 1 was an engineer, ID 2 a scientist, ID 3 a medic, ID 4 an
+  engineer, etc.
+- Method 2 gave 34 engineers and scientists (the first two professions
+  listed), and then tried to get 34 medics, but there were only 32
+  people left so there are only 32 medics.
+- Method 4 appears to choose probabilistically (e.g., ID 1 has a 1/3
+  chance of being an engineer, scientist, or medic; same with ID 2,
+  etc). This in one sense is the best approach, but likely in practice
+  we’ll have substantial deviation from equality just by chance, as
+  happened here.
+
+> 1.3. Create a role variable that suites the needs of your colony, and
+> explain why you chose that method.
+
+Note to Mason: ‘suits’ rather than ‘suites’ :)
+
+Honestly, I don’t really like any of the methods. Method 4 produces
+unequal n’s. Method 1&3 are the closest to unequal n’s, but I have two
+problems with this approach:
+
+1)  Which profession has 34 isn’t random
+
+2)  More importantly, which ID’s get which professions isn’t random.
+    Because age was random, I don’t think that’s a problem here. But
+    let’s say that we assigned age categorically, via age =
+    rep(c(“young”, “mature”, “old”), length.out = 100). Now, EVERY
+    engineer is young, every medic is old, etc. This seems like a major
+    problem.
+
+This issue could perhaps be solved with block randomization rather than
+using the same order for each block of 3, but what I’d like would be to
+just randomly assign 33 of the IDs to engineer, 33 to scientist, and 33
+to medic. This has to be doable, right???
+
+Given the options, I think I have to go with Method 4, but I’m not crazy
+about it because I wanted more of a uniform distribution of each of the
+roles.
+
+``` r
+set.seed(123)
+```
+
+``` r
+df_colonists <- df_colonists %>% mutate (role = sample(c("engineer", "scientist", "medic"), replace = TRUE, size = 100, prob = c(1,1,1)) )
+```
 
 ### Exercise 2
 
