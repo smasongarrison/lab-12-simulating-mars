@@ -153,8 +153,8 @@ just randomly assign 33 of the IDs to engineer, 33 to scientist, and 33
 to medic. This has to be doable, right???
 
 Given the options, I think I have to go with Method 4, but I’m not crazy
-about it because I wanted more of a uniform distribution of each of the
-roles.
+about it because I wanted more of a uniform (identical) distribution of
+each of the roles.
 
 ``` r
 set.seed(123)
@@ -164,8 +164,81 @@ set.seed(123)
 df_colonists <- df_colonists %>% mutate (role = sample(c("engineer", "scientist", "medic"), replace = TRUE, size = 100, prob = c(1,1,1)) )
 ```
 
+> 1.4. Add a uniformally-distributed MARSGAR variable to your colony.
+
+``` r
+df_colonists$marsgar <- runif(100,min = 50, max = 100)
+```
+
+This seems to have added marsgar to my data frame!!!!!! Yea. I thought I
+had to use mutate every time – this is much easier.
+
+Note I started my range at 50 rather than 0 so that my colonists aren’t
+dead …..
+
+``` r
+ggplot(data = df_colonists, mapping = aes(x = age, y = marsgar)) +
+  geom_point() +
+  labs(title = "Relationship between age and marsgar")
+```
+
+![](lab-12_files/figure-gfm/conducting_scatterplot-1.png)<!-- -->
+
 ### Exercise 2
 
-…
+> Simulate technical skills based on age using the equation
+> technical_skills = 2 \* age + noise.
 
-Add exercise headings as needed.
+``` r
+set.seed(1235)
+```
+
+We’re changing the seed that we used to create the other variables in
+the dataset (from 123 to 1235). I think there’s no particular reason to
+do this, but please let me know if that’s wrong!
+
+``` r
+df_colonists$technical_skills <- 2 * df_colonists$age + rnorm(100, mean = 0, sd = 1)
+```
+
+``` r
+ggplot(data = df_colonists, mapping = aes(x = age, y = technical_skills)) +
+  geom_point() +
+  labs(title = "Relationship between age and technical_skills")
+```
+
+![](lab-12_files/figure-gfm/another_scatterplot-1.png)<!-- -->
+
+Hmm, I wish technical skills went up that clearly with age, but as the
+Mason and Eric data points indicate, this is an unrealistic graph….
+
+> 2.2. Simulate problem-solving abilities based on their assigned role.
+> Now its your turn! Simulate problem-solving abilities based on their
+> assigned role. Recall that the options are “engineer”, “scientist”,
+> “medic”. First you need to think about the relationship between the
+> role AND the variable being simulated. Then you can write up the
+> equation that would create that relationship. And then you can write
+> the code to simulate the variable.
+
+I’m going to assume problem solving ranges from 0 to 100. I’m going to
+make the following other assumptions:
+
+1)  The rank ordering of problem solving ability is (from best to
+    worst): engineer, scientist, medic
+2)  However, the three professions are very similar in problem solving
+    ability, and there is substantial overlap among the distributions
+3)  In general, the problem solving ability is quite high
+
+I’ll make the means 74, 75, and 76, and with a constant sd of 6. In
+actuality, the sd should probably be larger, but I don’t want to get a
+score greater than 100 and i’m not sure how to deal with that
+possibility. There also should probably be some negative skew, but this
+should suffice for now.
+
+``` r
+df_colonists$problem_solving[df_colonists$role == "engineer"] <- rnorm(sum(df_colonists$role == "engineer"), mean = 76, sd = 6)
+df_colonists$problem_solving[df_colonists$role == "scientist"] <- rnorm(sum(df_colonists$role == "scientist"), mean = 75, sd = 6)
+df_colonists$problem_solving[df_colonists$role == "medic"] <- rnorm(sum(df_colonists$role == "medic"), mean = 74, sd = 6)
+```
+
+This worked, but I don’t understand why. Why is the sum command there?
