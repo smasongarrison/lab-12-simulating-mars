@@ -241,4 +241,7 @@ df_colonists$problem_solving[df_colonists$role == "scientist"] <- rnorm(sum(df_c
 df_colonists$problem_solving[df_colonists$role == "medic"] <- rnorm(sum(df_colonists$role == "medic"), mean = 74, sd = 6)
 ```
 
-This worked, but I don’t understand why. Why is the sum command there?
+This is as far as I got. This code worked (I think), but I don’t
+understand why. In particular, why is the sum command there?
+
+I Also want to get means and sd’s per group as a check.
