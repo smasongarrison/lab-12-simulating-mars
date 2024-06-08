@@ -50,7 +50,7 @@ I think the idea here is to see how the shape looks with different seeds.  So I 
 ```{r create-data-frame-100, message=FALSE}
 set.seed(100)
 df_colonists_seed100 <- data.frame(id = 1:100, age = rnorm(100, mean = 30, sd = 5))
-ggplot(data = df_colonists, mapping = aes(x = age)) +
+ggplot(data = df_colonists_seed100, mapping = aes(x = age)) +
   geom_histogram() +
   labs(title = "Distribution of Colonist Ages, Seed 100")
 ```
@@ -58,7 +58,7 @@ ggplot(data = df_colonists, mapping = aes(x = age)) +
 ```{r create-data-frame-1000, message=FALSE}
 set.seed(1000)
 df_colonists_seed1000 <- data.frame(id = 1:100, age = rnorm(100, mean = 30, sd = 5))
-ggplot(data = df_colonists, mapping = aes(x = age)) +
+ggplot(data = df_colonists_seed1000, mapping = aes(x = age)) +
   geom_histogram() +
   labs(title = "Distribution of Colonist Ages, Seed 1000")
 ```
