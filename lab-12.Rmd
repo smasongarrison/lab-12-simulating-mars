@@ -50,7 +50,7 @@ I think the idea here is to see how the shape looks with different seeds.  So I 
 ```{r create-data-frame-100, message=FALSE}
 set.seed(100)
 df_colonists_seed100 <- data.frame(id = 1:100, age = rnorm(100, mean = 30, sd = 5))
-ggplot(data = df_colonists, mapping = aes(x = age)) +
+ggplot(data = df_colonists_seed100, mapping = aes(x = age)) +
   geom_histogram() +
   labs(title = "Distribution of Colonist Ages, Seed 100")
 ```
@@ -58,7 +58,7 @@ ggplot(data = df_colonists, mapping = aes(x = age)) +
 ```{r create-data-frame-1000, message=FALSE}
 set.seed(1000)
 df_colonists_seed1000 <- data.frame(id = 1:100, age = rnorm(100, mean = 30, sd = 5))
-ggplot(data = df_colonists, mapping = aes(x = age)) +
+ggplot(data = df_colonists_seed1000, mapping = aes(x = age)) +
   geom_histogram() +
   labs(title = "Distribution of Colonist Ages, Seed 1000")
 ```
@@ -67,6 +67,23 @@ The distributions are slightly different, as would be expected.
 
 Note in what you (Mason) showed, they were on the same graph. I'm not seeing how you did that. That would be a good thing to discuss too.
 
+* create 3 vectors, and then combine them into a dataframe with 
+* df <- data.frame (age, age2, age3)
+
+The above two lines were from Mason, so I'm going to try this out.  
+
+
+```{r create-data-frame-combined, message=FALSE}
+set.seed(123)
+age_vector_123 <- rnorm(100, mean = 30, sd = 5)
+set.seed(100)
+age_vector_100 <- rnorm(100, mean = 30, sd = 5)
+set.seed(1000)
+age_vector_1000 <- rnorm(100, mean = 30, sd = 5)
+age_df <- data.frame (age_vector_123, age_vector_100, age_vector_1000)
+```
+
+Yea. This worked!
 
 > What roles would these colonists have? Let’s decide….. We need engineers, scientists, and medics in equal numbers. We’ll create a variable, role, with three categories: engineer, scientist, and medic. We’ll use the rep() function to simulate this categorical variable. I’ve demonstrated several ways you can use rep() to create the role variable. Try them out.
 
@@ -158,16 +175,69 @@ I'm going to assume problem solving ranges from 0 to 100.  I'm going to make the
 2) However, the three professions are very similar in problem solving ability, and there is substantial overlap among the distributions
 3) In general, the problem solving ability is quite high
 
-I'll make the means 74, 75, and 76, and with a constant sd of 6. In actuality, the sd should probably be larger, but I don't want to get a score greater than 100 and i'm not sure how to deal with that possibility. There also should probably be some negative skew, but this should suffice for now.
+I'll make the means 72, 74, and 76, and with a constant sd of 6. In actuality, the sd should probably be larger, but I don't want to get a score greater than 100 and i'm not sure how to deal with that possibility. There also should probably be some negative skew, but this should suffice for now.
 
 ```{r adding_problem_solving, message=FALSE}
 df_colonists$problem_solving[df_colonists$role == "engineer"] <- rnorm(sum(df_colonists$role == "engineer"), mean = 76, sd = 6)
-df_colonists$problem_solving[df_colonists$role == "scientist"] <- rnorm(sum(df_colonists$role == "scientist"), mean = 75, sd = 6)
-df_colonists$problem_solving[df_colonists$role == "medic"] <- rnorm(sum(df_colonists$role == "medic"), mean = 74, sd = 6)
+df_colonists$problem_solving[df_colonists$role == "scientist"] <- rnorm(sum(df_colonists$role == "scientist"), mean = 74, sd = 6)
+df_colonists$problem_solving[df_colonists$role == "medic"] <- rnorm(sum(df_colonists$role == "medic"), mean = 72, sd = 6)
 ```
 
-This is as far as I got. This code worked (I think), but I don't understand why.  In particular, why is the sum command there?
+Checking means and sd's
 
-I Also want to get means and sd's per group as a check.
+```{r checking_descriptives, message=FALSE}
+df_colonists %>% 
+  filter(role == "scientist") %>% 
+  summarize(
+    mean_ps_scientist = mean(problem_solving),
+    sd_ps_scientist = sd(problem_solving)
+    )
+df_colonists %>% 
+  filter(role == "engineer") %>% 
+  summarize(
+    mean_ps_engineer = mean(problem_solving),
+    sd_ps_engineer = sd(problem_solving)
+    )
+df_colonists %>% 
+  filter(role == "medic") %>% 
+  summarize(
+    mean_ps_medic = mean(problem_solving),
+    sd_ps_medic = sd(problem_solving)
+    )
+```
+
+This seems to have worked (I tried it with a few different seeds and got the same rank ordering), though with the relatively small n the means and sd's are a bit off. That's to be expected. 
+
+One question: In the code chunk "rnorm(sum(df_colonists$role == "engineer"), mean = 76, sd = 6)", why is the term "sum" there? I'm not seeing what is being summed.
+
+
+> 3.2. Simulate Resilience and Agreeableness
+Parameters for Simulation:
+    n = 100: We are simulating attributes for 100 colonists.
+    mu = c( 50, 50): Represents the average scores for Resilience and Agreeableness.
+    Sigma = matrix(c(100, 50, 50, 100), ncol = 2): The covariance matrix, where diagonals represent variances and the off-diagonals represent the covariance between the traits.
+
+
+```{r simulating-data_with_given_correlations, message=FALSE}
+library(MASS)
+
+# Define mean and covariance matrix
+mean_traits <- c(50, 50)
+cov_matrix <- matrix(c(100, 50, 
+                       50, 100), ncol = 2)
+
+# Generate correlated data
+
+traits_data <- mvrnorm(n = 100, mu = mean_traits, Sigma = cov_matrix, empirical = FALSE)
+
+colnames(traits_data) <- c("resilience", "agreeableness")
+
+df_colonists <- cbind(df_colonists, traits_data)
+```
+
+
+> But, now, we need to simulate more attributes for our colonists that don’t all have the same summary statistics. We need to simulate the big five personality traits: openness, conscientiousness, extraversion, agreeableness, and neuroticism. These traits are essential for understanding how colonists will interact with each other and cope with the challenges of living on Mars. Your task to simulate these traits using the mvrnorm function, using parameters that would make sense for these traits, and examine how closely your colonists match up with your population parameters.
+   3.3. Simulate Big Five Traits using the Correlation Matrix provided and examine how closely your colonists match up with your parameters.
+   Population Parameters for Big Five Traits I’ve provided a correlation matrix from Park et al. (2020)6 7 that you can use to get you started on simulating these traits.
 
 
