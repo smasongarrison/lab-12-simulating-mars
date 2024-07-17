@@ -312,6 +312,10 @@ seeing what is being summed.
 > the covariance between the traits.
 
 ``` r
+set.seed (123)
+```
+
+``` r
 library(MASS)
 
 # Define mean and covariance matrix
@@ -342,3 +346,192 @@ df_colonists <- cbind(df_colonists, traits_data)
 > Parameters for Big Five Traits I’ve provided a correlation matrix from
 > Park et al. (2020)6 7 that you can use to get you started on
 > simulating these traits.
+
+I am choosing the following inputs (same order that you provided the
+correlation matrix). means: 75, 80, 85, 85, 75 (My reasoning is that
+colonists need to be high in all of these. Perhaps extraversion and
+openness are the least important, but it’s close.) SDs: 5, 6, 4, 3, 7
+(least variability in conscientiousness, most in openness) VARs: 25, 36,
+16, 9, 49
+
+Note the hardest part here was converting the correlation matrix to a
+covariance matrix. I started doing that in excel, but then decided to
+get chatgpt’s help with some R code for doing that.
+
+``` r
+# Define means
+mean_traits_big5 <- c(75, 80, 85, 85, 75)
+# Define correlation matrix
+corrmatrix_big5 <- matrix(c(
+  1.0000, 0.2599, 0.1972, 0.1860, 0.2949,
+  0.2599, 1.0000, 0.1576, 0.2306, 0.0720,
+  0.1972, 0.1576, 1.0000, 0.2866, 0.1951,
+  0.1860, 0.2306, 0.2866, 1.0000, 0.1574,
+  0.2949, 0.0720, 0.1951, 0.1574, 1.0000
+  ), nrow=5, ncol=5, byrow=TRUE,
+  dimnames=list(c("EXT", "EmotSt", "AGR", "COOP", "OPEN"), 
+        c("EXT", "EmotST", "AGR", "COOP", "OPEN")))
+# Define Standard Deviations
+sd_traits_big5 <- c(5, 6, 4, 3, 7)
+# Define Covariance matrix
+covmatrix_big5 <- corrmatrix_big5
+  for (i in 1:nrow(corrmatrix_big5)) {
+  for (j in 1:ncol(corrmatrix_big5)) {
+    covmatrix_big5[i, j] <- corrmatrix_big5[i, j] * sd_traits_big5[i] * sd_traits_big5[j]
+  }
+  }
+```
+
+``` r
+# Generate correlated data
+
+traits_data_big5 <- mvrnorm(n = 100, mu = mean_traits_big5, Sigma = covmatrix_big5, empirical = FALSE)
+
+df_colonists <- cbind(df_colonists, traits_data_big5)
+```
+
+This seems to have worked. Yea!! The covariance matrix looks reasonable
+to me, as does the data set. Nonetheless, I’ll go ahead and check this
+to make sure that it produced data that at least approximates the actual
+parameters.
+
+``` r
+df_colonists %>% 
+  summarize(
+    mean_ext = mean(EXT),
+    mean_emotst = mean(EmotSt),
+    mean_agr = mean(AGR),
+    mean_coop = mean(COOP),
+    mean_open = mean(OPEN),
+    sd_ext = sd(EXT),
+    sd_emotst = sd(EmotSt),
+    sd_agr = sd(AGR),
+    sd_coop = sd(COOP),
+    sd_open = sd(OPEN)
+    )
+```
+
+    ##   mean_ext mean_emotst mean_agr mean_coop mean_open   sd_ext sd_emotst   sd_agr
+    ## 1 75.03461    79.66165 84.94637  85.35929  73.98684 5.083849  6.001536 3.692383
+    ##    sd_coop  sd_open
+    ## 1 2.909853 6.831667
+
+These look pretty close! Now checking correlations.
+
+``` r
+df_colonists %>% 
+  summarize(
+    ext_emotst = cor(EXT, EmotSt),
+    ext_agr = cor(EXT, AGR),    
+    ext_coop = cor(EXT, COOP),
+    ext_open = cor(EXT, OPEN),
+    emotst_agr = cor(AGR, EmotSt),
+    emotst_coop = cor(COOP, EmotSt),
+    emotst_open = cor(OPEN, EmotSt),
+    agr_coop = cor(AGR, COOP),
+    agr_open = cor(AGR, OPEN),
+    coop_open = cor(COOP, OPEN)
+            )
+```
+
+    ##   ext_emotst   ext_agr  ext_coop  ext_open emotst_agr emotst_coop emotst_open
+    ## 1  0.2548198 0.0781716 0.1366463 0.2355099  0.1620353    0.174339 -0.03531369
+    ##   agr_coop  agr_open coop_open
+    ## 1 0.164207 0.2616189 0.1953867
+
+These are obviously far from exact, but seem pretty close, in that the
+smaller correlations in the population are typically the smallest
+correlations here too.
+
+> Great! We have successfully simulated a dataset of 100 colonists with
+> interdependent skills. The summary statistics show that the mean and
+> standard deviation of the simulated data match the population
+> parameters. The correlation matrix also aligns (fairly well) with the
+> specified values. But did we just get lucky? Let’s run the simulation
+> multiple times to ensure the results are consistent across different
+> scenarios.
+
+Okay, I’m going to rerun this now using a different seed.
+
+``` r
+set.seed(2)
+
+# Generate correlated data
+
+traits_data_big5_2 <- mvrnorm(n = 100, mu = mean_traits_big5, Sigma = covmatrix_big5, empirical = FALSE)
+
+# Need to change the variable names before combining
+
+traits_data_big5_2 <- as.data.frame(traits_data_big5_2)
+
+traits_data_big5_2 <- traits_data_big5_2 %>%
+  rename(
+    EXT_2 = EXT,
+    EmotSt_2 = EmotSt,
+    AGR_2 = AGR,
+    COOP_2 = COOP,
+    OPEN_2 = OPEN
+  )
+
+# Now combining
+
+df_colonists <- cbind(df_colonists, traits_data_big5_2)
+
+df_colonists %>% 
+  summarize(
+    mean_ext = mean(EXT_2),
+    mean_emotst = mean(EmotSt_2),
+    mean_agr = mean(AGR_2),
+    mean_coop = mean(COOP_2),
+    mean_open = mean(OPEN_2),
+    sd_ext = sd(EXT_2),
+    sd_emotst = sd(EmotSt_2),
+    sd_agr = sd(AGR_2),
+    sd_coop = sd(COOP_2),
+    sd_open = sd(OPEN_2)
+    )
+```
+
+    ##   mean_ext mean_emotst mean_agr mean_coop mean_open  sd_ext sd_emotst   sd_agr
+    ## 1 75.89749    79.78157 83.89919  85.07172  75.18771 5.53572  5.913602 3.649496
+    ##    sd_coop  sd_open
+    ## 1 3.128605 8.018857
+
+``` r
+df_colonists %>% 
+  summarize(
+    ext_emotst = cor(EXT_2, EmotSt_2),
+    ext_agr = cor(EXT_2, AGR_2),    
+    ext_coop = cor(EXT_2, COOP_2),
+    ext_open = cor(EXT_2, OPEN_2),
+    emotst_agr = cor(AGR_2, EmotSt_2),
+    emotst_coop = cor(COOP_2, EmotSt_2),
+    emotst_open = cor(OPEN_2, EmotSt_2),
+    agr_coop = cor(AGR_2, COOP_2),
+    agr_open = cor(AGR_2, OPEN_2),
+    coop_open = cor(COOP_2, OPEN_2)
+            )
+```
+
+    ##   ext_emotst   ext_agr  ext_coop  ext_open emotst_agr emotst_coop emotst_open
+    ## 1  0.2683853 0.2793148 0.1861396 0.3736172  0.2514277   0.2285086    0.139337
+    ##    agr_coop  agr_open coop_open
+    ## 1 0.3841086 0.2976159 0.2426183
+
+Again, this seems to have worked pretty well.
+
+Note I just checked how you approached this question. It looks similar,
+though you have a different command for computing the covariance matrix.
+Yours looks to be more efficient, but I don’t understand it (there’s a
+weird t in the command). Perhaps we can discuss this on sunday.
+
+> Exercise 4: Preparing for the Unexpected Generate the big five for 100
+> colonies of 100 colonists, repeating this process multiple times to
+> how much our colony might look if we settled on 100 different planets.
+> We’ve already made the colonists for one planet, so we’ll just need to
+> replicate that process 99 more times. There are two major approaches
+> to take here. You can either use replicate, which is easier, or a for
+> loop, which is more flexible.
+
+> 4.1. Generate 100 colonies and extract the mean and standard deviation
+> for extraversion.
