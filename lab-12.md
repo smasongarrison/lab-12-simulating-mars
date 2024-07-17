@@ -525,6 +525,10 @@ though you have a different command for computing the covariance matrix.
 Yours looks to be more efficient, but I don’t understand it (there’s a
 weird t in the command). Perhaps we can discuss this on sunday.
 
+``` r
+set.seed(123)
+```
+
 > Exercise 4: Preparing for the Unexpected Generate the big five for 100
 > colonies of 100 colonists, repeating this process multiple times to
 > how much our colony might look if we settled on 100 different planets.
@@ -535,3 +539,170 @@ weird t in the command). Perhaps we can discuss this on sunday.
 
 > 4.1. Generate 100 colonies and extract the mean and standard deviation
 > for extraversion.
+
+``` r
+# Taking out previous values for the Big 5
+
+df_colonists <- df_colonists %>% select(-EXT_2, -EmotSt_2, -AGR_2, -COOP_2, -OPEN_2)
+```
+
+It turns out I did not need to do the above. I hadn’t realized quite how
+things would work so wanted to take out the data with a different seed.
+I’m leaving this here, however, because it’s a nice example of how to
+remove variables from a data frame and I might want to use this later.
+
+``` r
+colonies_data <- replicate(100, {
+  mvrnorm(n = 100, mu = mean_traits_big5, Sigma = covmatrix_big5, empirical = FALSE)
+}, simplify = FALSE)
+
+# This is in a list format, which is hard to see, so I converted to a data frame.
+
+combined_data <- do.call(rbind, lapply(seq_along(colonies_data), function(i) {
+  cbind(colony = i, colonies_data[[i]])
+}))
+
+combined_data <- as.data.frame(combined_data)
+```
+
+Now computing the desired statistics
+
+``` r
+summary_ext <- combined_data %>%
+  group_by(colony) %>%
+  summarize(
+    mean_ext_per_colony = mean(EXT, na.rm = TRUE),
+    sd_ext_per_colony = sd(EXT, na.rm = TRUE)
+  )
+
+summary_ext %>% 
+  summarize(
+    mean_ext = mean(mean_ext_per_colony),
+    sd_ext = mean(sd_ext_per_colony)
+    )
+```
+
+    ## # A tibble: 1 × 2
+    ##   mean_ext sd_ext
+    ##      <dbl>  <dbl>
+    ## 1     75.0   4.99
+
+These are pretty much perfect.
+
+This exercise took me quite some time, because I wanted to do this
+without looking at your hints. I couldn’t figure out how to do this
+without Chat’s help, but the way it set up the code initially didn’t
+make sense to me. So I iterated this multiple times (good practice for
+both classes…) with Chat, and finally found the step by step approach
+above that makes sense to me, that I can visualize, and that I think I
+can adapt for future uses. (The one partial exception is the conversion
+of the list to the data frame – I see mostly what’s happening here, but
+not precisely how the commands work.)
+
+> Although you can get the summary statistic for each variable, let’s
+> focus on the mean and standard deviation for extraversion as well as
+> its correlation with openness. Please plot the distribution of the
+> correlation coefficients to see how consistent the relationship
+> between extraversion and openness is across different planets.
+> Consider how this distribution might differ across colonists. How
+> large of a sample size would you need to get a stable estimate of the
+> correlation between extraversion and openness?
+
+``` r
+summary_ext_open_corr <- combined_data %>%
+  group_by(colony) %>%
+  summarize(
+    ext_open_corr = cor(EXT, OPEN)
+  )
+
+summary_ext_open_corr %>% 
+  summarize(
+    mean_ext_open_corr = mean(ext_open_corr)
+    )
+```
+
+    ## # A tibble: 1 × 1
+    ##   mean_ext_open_corr
+    ##                <dbl>
+    ## 1              0.300
+
+The correlation parameter is .2949, so on average (across the 100
+colonies) we are doing an excellent job estimating the true population
+correlation.
+
+Now I need to plot the distribution of scores. I remember from an
+earlier lab having trouble creating a grouped histogram. I found what I
+did there and adapated it for this, though it seems like there should be
+an easier way.
+
+``` r
+summary_ext_open_corr <- summary_ext_open_corr %>%
+  mutate(corr_grouped = case_when(
+    ext_open_corr > 0 & ext_open_corr <= .05 ~ "0-.05",
+    ext_open_corr > .05 & ext_open_corr <= .10 ~ ".05-.10",
+    ext_open_corr > .10 & ext_open_corr <= .15 ~ ".10-.15",
+    ext_open_corr > .15 & ext_open_corr <= .20 ~ ".15-.20",
+    ext_open_corr > .20 & ext_open_corr <= .25 ~ ".20-.25",
+    ext_open_corr > .25 & ext_open_corr <= .30 ~ ".25-.30",
+    ext_open_corr > .30 & ext_open_corr <= .35 ~ ".30-.35",
+    ext_open_corr > .35 & ext_open_corr <= .40 ~ ".35-.40",
+    ext_open_corr > .40 & ext_open_corr <= .45 ~ ".40-.45",
+    ext_open_corr > .45 & ext_open_corr <= .50 ~ ".45-.50"
+  ))
+summary_ext_open_corr_with_n <- summary_ext_open_corr %>%
+  count(corr_grouped) %>%
+  complete(corr_grouped, fill = list(n = 0))
+ggplot(summary_ext_open_corr_with_n, aes(x = corr_grouped, y=n)) + 
+  geom_bar(stat="identity") +
+  labs(
+    title = "Number of correlations in each range",
+    x = "Correlation", y = "Count"
+  )
+```
+
+![](lab-12_files/figure-gfm/plotting_distribution-1.png)<!-- -->
+
+You can tell from the graph that the average correlation is pretty much
+right on, though there is quite a bit of variability around that.
+
+You asked how large an n we’d need to get a stable estimate of the
+correlation. Clearly n = 100 is not remotely close. 1,000 is pretty
+good, though it depends on just how precise one wants to be. For most
+practical purposes n = 1,000 seems like more than enough, but to report
+in a paper I’d want more than that (at least 10,000, perhaps more).
+
+> 4.2. Plot the distributions of those statistics from your new empire
+> of colonies, and include an annotation in the plot to show the
+> population parameters.
+
+I think this question is asking me to redo the above but with the
+population correlation listed on it, which seems useful. Here we go:
+
+``` r
+summary_ext_open_corr <- summary_ext_open_corr %>%
+  mutate(corr_grouped = case_when(
+    ext_open_corr > 0 & ext_open_corr <= .05 ~ "0-.05",
+    ext_open_corr > .05 & ext_open_corr <= .10 ~ ".05-.10",
+    ext_open_corr > .10 & ext_open_corr <= .15 ~ ".10-.15",
+    ext_open_corr > .15 & ext_open_corr <= .20 ~ ".15-.20",
+    ext_open_corr > .20 & ext_open_corr <= .25 ~ ".20-.25",
+    ext_open_corr > .25 & ext_open_corr <= .30 ~ ".25-.30",
+    ext_open_corr > .30 & ext_open_corr <= .35 ~ ".30-.35",
+    ext_open_corr > .35 & ext_open_corr <= .40 ~ ".35-.40",
+    ext_open_corr > .40 & ext_open_corr <= .45 ~ ".40-.45",
+    ext_open_corr > .45 & ext_open_corr <= .50 ~ ".45-.50"
+  ))
+summary_ext_open_corr_with_n <- summary_ext_open_corr %>%
+  count(corr_grouped) %>%
+  complete(corr_grouped, fill = list(n = 0))
+ggplot(summary_ext_open_corr_with_n, aes(x = corr_grouped, y = n)) + 
+  geom_bar(stat = "identity") +
+  geom_vline(xintercept = 5.45, linetype = "dashed", color = "red", linewidth = 1) +  # Adjust xintercept to match position
+  annotate("text", x = 5.45, y = max(summary_ext_open_corr_with_n$n), label = "Population Correlation = 0.2949", color = "red", vjust = -0.5) +
+  labs(
+    title = "Number of correlations in each range",
+    x = "Correlation", y = "Count"
+  )
+```
+
+![](lab-12_files/figure-gfm/plotting_distribution_with_population_correlation-1.png)<!-- -->
