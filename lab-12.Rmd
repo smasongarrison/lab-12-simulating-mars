@@ -211,11 +211,26 @@ This seems to have worked (I tried it with a few different seeds and got the sam
 One question: In the code chunk "rnorm(sum(df_colonists$role == "engineer"), mean = 76, sd = 6)", why is the term "sum" there? I'm not seeing what is being summed.
 
 
+
+
 > 3.2. Simulate Resilience and Agreeableness
 Parameters for Simulation:
     n = 100: We are simulating attributes for 100 colonists.
     mu = c( 50, 50): Represents the average scores for Resilience and Agreeableness.
     Sigma = matrix(c(100, 50, 50, 100), ncol = 2): The covariance matrix, where diagonals represent variances and the off-diagonals represent the covariance between the traits.
+
+
+```{r adding_problem_solving, message=FALSE}
+df_colonists$problem_solving[df_colonists$role == "engineer"] <- rnorm(sum(df_colonists$role == "engineer"), mean = 76, sd = 6)
+df_colonists$problem_solving[df_colonists$role == "scientist"] <- rnorm(sum(df_colonists$role == "scientist"), mean = 74, sd = 6)
+df_colonists$problem_solving[df_colonists$role == "medic"] <- rnorm(sum(df_colonists$role == "medic"), mean = 72, sd = 6)
+```
+
+Checking means and sd's
+
+```{r setting_original_seed, message=FALSE}
+set.seed (123)
+```
 
 
 ```{r simulating-data_with_given_correlations, message=FALSE}
@@ -240,4 +255,52 @@ df_colonists <- cbind(df_colonists, traits_data)
    3.3. Simulate Big Five Traits using the Correlation Matrix provided and examine how closely your colonists match up with your parameters.
    Population Parameters for Big Five Traits I’ve provided a correlation matrix from Park et al. (2020)6 7 that you can use to get you started on simulating these traits.
 
+I am choosing the following inputs (same order that you provided the correlation matrix).
+means: 75, 80, 85, 85, 75
+(My reasoning is that colonists need to be high in all of these. Perhaps extraversion and openness are the least important, but it's close.)
+SDs:  5, 6, 4, 3, 7  (least variability in conscientiousness, most in openness)
+VARs: 25, 36, 16, 9, 49
 
+Note the hardest part here was converting the correlation matrix to a covariance matrix. I started doing that in excel, but then decided to get chatgpt's help with some R code for doing that.
+
+```{r getting_inputs_for_big5, message=FALSE}
+
+# Define means
+mean_traits_big5 <- c(75, 80, 85, 85, 75)
+# Define correlation matrix
+corrmatrix_big5 <- matrix(c(
+  1.0000, 0.2599, 0.1972, 0.1860, 0.2949,
+  0.2599, 1.0000, 0.1576, 0.2306, 0.0720,
+  0.1972, 0.1576, 1.0000, 0.2866, 0.1951,
+  0.1860, 0.2306, 0.2866, 1.0000, 0.1574,
+  0.2949, 0.0720, 0.1951, 0.1574, 1.0000
+  ), nrow=5, ncol=5, byrow=TRUE,
+  dimnames=list(c("EXT", "EmotSt", "AGR", "COOP", "OPEN"), 
+        c("EXT", "EmotST", "AGR", "COOP", "OPEN")))
+# Define Standard Deviations
+sd_traits_big5 <- c(5, 6, 4, 3, 7)
+# Define Covariance matrix
+covmatrix_big5 <- corrmatrix_big5
+  for (i in 1:nrow(corrmatrix_big5)) {
+  for (j in 1:ncol(corrmatrix_big5)) {
+    covmatrix_big5[i, j] <- corrmatrix_big5[i, j] * sd_traits_big5[i] * sd_traits_big5[j]
+  }
+  }
+
+```
+
+```{r simulating-big5data, message=FALSE}
+
+# Generate correlated data
+
+traits_data_big5 <- mvrnorm(n = 100, mu = mean_traits_big5, Sigma = covmatrix_big5, empirical = FALSE)
+
+df_colonists <- cbind(df_colonists, traits_data_big5)
+```
+
+This seems to have worked. Yea!!  The covariance matrix looks reasonable to me, as does the data set. Nonetheless, I'll go ahead and check this to make sure that it produced data that at least approximates the actual parameters.
+
+
+
+
+Note I just checked how you approached this question. It looks similar, though you have a different command for computing the covariance matrix. Yours looks to be more efficient, but I don't understand it (there's a weird t in the command). Perhaps we can discuss this on sunday.
